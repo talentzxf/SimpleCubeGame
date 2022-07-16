@@ -48,7 +48,7 @@ public class DiceSpawner : MonoBehaviour
         }
     }
 
-    IEnumerator rotateColumn(int colId)
+    IEnumerator rotateColumn(int colId, bool ccw = true)
     {
         isRotating = true;
         float rotateAngle = 0.0f;
@@ -58,7 +58,10 @@ public class DiceSpawner : MonoBehaviour
             rotateAngle += 1.0f;
             for (int i = 0; i < n; i++)
             {
-                dieArray[colId, i].transform.Rotate(Vector3.forward, 1.0f, Space.World);
+                if(ccw)
+                    dieArray[colId, i].transform.Rotate(Vector3.forward, 1.0f, Space.World);
+                else
+                    dieArray[colId, i].transform.Rotate(Vector3.forward, -1.0f, Space.World);
             }
             
             yield return null;
@@ -67,7 +70,7 @@ public class DiceSpawner : MonoBehaviour
         isRotating = false;
     }
     
-    IEnumerator rotateRow(int rowId)
+    IEnumerator rotateRow(int rowId, bool ccw = true)
     {
         isRotating = true;
         float rotateAngle = 0.0f;
@@ -77,7 +80,10 @@ public class DiceSpawner : MonoBehaviour
             rotateAngle += 1.0f;
             for (int i = 0; i < n; i++)
             {
-                dieArray[i, rowId].transform.Rotate(Vector3.left, 1.0f, Space.World);
+                if(ccw)
+                    dieArray[i, rowId].transform.Rotate(Vector3.left, 1.0f, Space.World);
+                else
+                    dieArray[i, rowId].transform.Rotate(Vector3.left, -1.0f, Space.World);
             }
             
             yield return null;
@@ -85,48 +91,47 @@ public class DiceSpawner : MonoBehaviour
 
         isRotating = false;
     }
+
+    GameObject createButton(Vector2 offset, int i, bool isRow, bool ccw)
+    {
+        GameObject buttonGO = Instantiate(buttonPrefab);
+        buttonGO.transform.SetParent(buttonArrayPositon.transform);
+
+        buttonGO.transform.localPosition = new Vector3();
+        RectTransform buttonRectTransform = buttonGO.GetComponent<RectTransform>();
+        buttonRectTransform.localPosition = offset;
+
+        TextMeshProUGUI text = buttonGO.GetComponentInChildren<TextMeshProUGUI>();
+        text.text = (i + 1).ToString();
+
+        Button btn = buttonGO.GetComponent<Button>();
+
+        int columnId = i;
+        bool _isRow = isRow;
+        bool _ccw = ccw;
+        btn.onClick.AddListener(delegate {
+            if (!isRotating)
+            {
+                if(_isRow)
+                    StartCoroutine(rotateRow(columnId, _ccw));
+                else
+                    StartCoroutine(rotateColumn(columnId, _ccw));
+            } });
+        return buttonGO;
+    }
     
     private void setupUI()
     {
         RectTransform buttonArrayRectTransform = buttonArrayPositon.GetComponent<RectTransform>();
 
-        //TODO: Merge these two for-loop in one to avoid code duplication.
         for (int i = 0; i < n; i++) // the ith column
         {
-            GameObject buttonGO = Instantiate(buttonPrefab);
-            buttonGO.transform.SetParent(buttonArrayPositon.transform);
-
-            buttonGO.transform.localPosition = new Vector3();
-            RectTransform buttonRectTransform = buttonGO.GetComponent<RectTransform>();
-            buttonRectTransform.localPosition = new Vector2((i + 1) * buttonOffset, -buttonOffset );
-
-            TextMeshProUGUI text = buttonGO.GetComponentInChildren<TextMeshProUGUI>();
-            text.text = (i + 1).ToString();
-
-            Button btn = buttonGO.GetComponent<Button>();
-
-            int columnId = i;
-            btn.onClick.AddListener(delegate { if(!isRotating) { StartCoroutine(rotateColumn(columnId));} });
+            createButton(new Vector2((i + 1) * buttonOffset, -buttonOffset), i, false, true);
+            createButton(new Vector2((i + 1) * buttonOffset, -2.0f * buttonOffset), i, false, false);
+            createButton(new Vector2(0.0f, i * this.buttonOffset), i, true, true);
+            createButton(new Vector2(-this.buttonOffset, i * this.buttonOffset), i, true, false);
         }
-
-        for (int j = 0; j < n; j++) // The jth row
-        {
-            GameObject buttonGO = Instantiate(buttonPrefab);
-            buttonGO.transform.SetParent(buttonArrayPositon.transform);
-
-            buttonGO.transform.localPosition = new Vector3();
-            RectTransform buttonRectTransform = buttonGO.GetComponent<RectTransform>();
-            buttonRectTransform.localPosition = new Vector2(0.0f, j * this.buttonOffset);
-
-            TextMeshProUGUI text = buttonGO.GetComponentInChildren<TextMeshProUGUI>();
-            text.text = (j + 1).ToString();
-            
-            Button btn = buttonGO.GetComponent<Button>();
-
-            int rowId = j;
-            btn.onClick.AddListener(delegate { if(!isRotating){ StartCoroutine(rotateRow(rowId));} });
-        }
-
+        
         scoreTextInput = scoreText.GetComponent<TextMeshProUGUI>();
     }
 
